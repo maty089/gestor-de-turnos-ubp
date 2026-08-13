@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Producción y Grabaciones</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --border: #334155;
+            --tag-bg: #3b82f620;
+            --tag-color: #60a5fa;
+            --danger: #ef4444;
+
+            --st-1: #00315C;
+            --st-2: #6E0000;
+            --st-3: #334155;
+            --feriado-bg: #4c1d95;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: var(--bg); color: var(--text); padding: 20px; }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        h1 { font-size: 1.4rem; font-weight: 700; }
+
+        .controls-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: rgba(30, 41, 59, 0.6);
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .filter-group label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            font-weight: 600;
+        }
+
+        .btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+        .btn:hover { background: var(--accent-hover); }
+        .btn-secondary { background: #334155; }
+        .btn-secondary:hover { background: #475569; }
+        .btn-secondary.active { background: var(--accent); }
+        .btn-toggle-active { background: #854d0e; }
+        .btn-toggle-active:hover { background: #a16207; }
+        .btn-urgent-active { background: #991b1b; }
+        .btn-urgent-active:hover { background: #b91c1c; }
+        .btn-danger { background: #991b1b; }
+        .btn-danger:hover { background: var(--danger); }
+
+        .navigator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #1e293b;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        .range-label { font-weight: 700; font-size: 0.9rem; min-width: 220px; text-align: center; }
+
+        .view-switch {
+            display: flex;
+            background: #1e293b;
+            padding: 2px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+        }
+        .view-switch .btn { padding: 6px 12px; border-radius: 4px; }
+
+        .week-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            align-items: start;
+            overflow-x: auto;
+        }
+
+        @media (max-width: 1200px) {
+            .week-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+        }
+
+        .month-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+
+        .list-view {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .card-st-1 { background: var(--st-1) !important; border-color: #1d4ed8 !important; }
+        .card-st-2 { background: var(--st-2) !important; border-color: #991b1b !important; }
+        .card-st-3 { background: var(--st-3) !important; border-color: #475569 !important; opacity: 0.65; }
+
+        .card.ocasion-especial, .list-item.ocasion-especial {
+            border: 2px solid #a855f7 !important;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+        }
+
+        .badge-especial {
+            background: #a855f7;
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .novedad-badge {
+            background: #0284c7;
+            color: #ffffff;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #38bdf8;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .novedad-badge button {
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 0.75rem;
+            margin-left: 6px;
+        }
+
+        .day-column.feriado, .month-cell.feriado {
+            background: rgba(76, 29, 149, 0.45) !important;
+            border: 1px dashed #a855f7 !important;
+        }
+
+        .feriado-header-tag {
+            background: #7c3aed;
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .list-item {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .list-info-main {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .list-date-badge {
+            font-size: 0.8rem;
+            color: #eab308;
+            font-weight: 700;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .list-title { font-size: 1rem; font-weight: 700; color: #fff; }
+        .list-sub { font-size: 0.82rem; color: var(--text-muted); }
+
+        .list-tags {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .list-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 220px;
+        }
+
+        .day-column {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            min-height: 600px;
+        }
+
+        .month-cell {
+            background: rgba(30, 41, 59, 0.4);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 8px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative;
+        }
+
+        .month-cell.empty {
+            background: rgba(15, 23, 42, 0.3);
+            border-style: dashed;
+            opacity: 0.4;
+        }
+
+        .month-cell-header {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .month-cell-header.today { color: var(--tag-color); }
+
+        .month-header-day {
+            text-align: center;
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            padding: 6px 0;
+            text-transform: uppercase;
+        }
+
+        .day-header {
+            text-align: center;
+            padding-bottom: 8px;
+            margin-bottom: 8px;
+            border-bottom: 2px solid var(--accent);
+            font-weight: 700;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            position: relative;
+        }
+
+        .day-header .date-sub {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+            font-weight: 400;
+        }
+
+        .header-actions-day {
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+            margin-top: 4px;
+        }
+
+        .btn-add-novedad {
+            background: none;
+            border: none;
+            color: #38bdf8;
+            font-size: 0.7rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-add-novedad:hover { text-decoration: underline; }
+
+        .btn-quick-add {
+            background: #10b98120;
+            border: 1px solid #10b981;
+            color: #34d399;
+            font-size: 0.7rem;
+            cursor: pointer;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+        .btn-quick-add:hover { background: #10b98140; }
+
+        .card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .card-compact {
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 4px 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .card-compact:hover { filter: brightness(1.2); }
+        .card-compact .compact-time { font-weight: bold; color: #eab308; }
+        .card-compact .compact-title { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        .time-badge {
+            background: #eab308;
+            color: #000;
+            font-weight: 800;
+            font-size: 0.8rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 4px;
+            margin-bottom: 6px;
+        }
+
+        .tag {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: var(--tag-bg);
+            color: var(--tag-color);
+            font-weight: 600;
+        }
+
+        .card-title { font-size: 0.95rem; font-weight: 700; color: #fff; margin-bottom: 2px; }
+        .card-sub { font-size: 0.8rem; color: #cbd5e1; margin-bottom: 8px; }
+        
+        .card-details {
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 8px;
+            background: rgba(15, 23, 42, 0.6);
+            padding: 8px;
+            border-radius: 4px;
+        }
+
+        .link-btn {
+            display: inline-block;
+            font-size: 0.75rem;
+            color: #38bdf8;
+            text-decoration: none;
+            margin-top: 4px;
+            word-break: break-all;
+        }
+
+        .code-badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            background: #0284c7;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        .card-actions {
+            margin-top: 8px;
+            padding-top: 6px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .card-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 4px;
+        }
+
+        .btn-xs { padding: 3px 8px; font-size: 0.75rem; border-radius: 4px; }
+
+        select, input, textarea {
+            background: #0f172a;
+            color: var(--text);
+            border: 1px solid var(--border);
+            padding: 6px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            width: 100%;
+        }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.75);
+            display: none; align-items: center; justify-content: center;
+            z-index: 1000; padding: 16px;
+        }
+        .modal {
+            background: var(--card-bg);
+            padding: 24px; border-radius: 8px; width: 100%; max-width: 650px;
+            border: 1px solid var(--border);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .form-group { margin-bottom: 10px; }
+        .form-group.full { grid-column: span 2; }
+        .form-group label { display: block; font-size: 0.8rem; margin-bottom: 4px; color: var(--text-muted); }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text) !important; }
+
+        /* Estilos del Administrador de Sugerencias */
+        .manager-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .manager-col {
+            background: #0f172a;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .manager-col h4 {
+            font-size: 0.85rem;
+            color: var(--tag-color);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 4px;
+        }
+
+        .input-add-group {
+            display: flex;
+            gap: 6px;
+        }
+
+        .input-add-group input {
+            font-size: 0.78rem;
+            padding: 4px 6px;
+        }
+
+        .manager-list-container {
+            max-height: 160px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .item-list-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.78rem;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .btn-delete-item {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .btn-delete-item:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <!-- Datalists de Sugerencias -->
+    <datalist id="profesoresDatalist"></datalist>
+    <datalist id="carrerasDatalist"></datalist>
+    <datalist id="materiasDatalist"></datalist>
+    <datalist id="contactosDatalist"></datalist>
+
+    <header>
+        <div>
+            <h1>Turnos de Grabación y Pedidos de Video</h1>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Agenda de estudio y seguimiento de edición (Tiempo Real)</p>
+        </div>
+
+        <div class="controls-bar">
+            <div class="view-switch">
+                <button class="btn btn-secondary active" id="btnWeekView" onclick="window.setViewMode('week')">Semana</button>
+                <button class="btn btn-secondary" id="btnMonthView" onclick="window.setViewMode('month')">Mes</button>
+                <button class="btn btn-secondary" id="btnListView" onclick="window.setViewMode('list')">Lista</button>
+            </div>
+
+            <div class="navigator" id="dateNavigator">
+                <button class="btn btn-secondary" onclick="window.navigateDate(-1)">◀ Ant.</button>
+                <span class="range-label" id="dateRangeLabel">Cargando...</span>
+                <button class="btn btn-secondary" onclick="window.navigateDate(1)">Sig. ▶</button>
+            </div>
+
+            <button class="btn" onclick="window.openModal()">+ Nuevo Pedido</button>
+        </div>
+    </header>
+
+    <section class="filter-bar">
+        <div class="filter-group">
+            <label for="searchInput">🔍 Palabra Clave:</label>
+            <input type="text" id="searchInput" placeholder="Profesor, materia, tema, código..." oninput="window.renderView()">
+        </div>
+
+        <div class="filter-group">
+            <label for="statusFilter">📌 Estado:</label>
+            <select id="statusFilter" onchange="window.renderView()">
+                <option value="TODOS">-- Todos los Estados --</option>
+                <optgroup label="Grupo 1 (En espera / Gestión)">
+                    <option value="Grabar">Grabar</option>
+                    <option value="Pasar a">Pasar a</option>
+                    <option value="Transmisión">Transmisión</option>
+                    <option value="Eventos">Eventos</option>
+                    <option value="Reunión">Reunión</option>
+                    <option value="Pasado a revisión">Pasado a revisión</option>
+                    <option value="Falta código de clase">Falta código de clase</option>
+                    <option value="Ocasión especial">Ocasión especial</option>
+                    <option value="Faltan indicaciones">Faltan indicaciones</option>
+                    <option value="Reprogramar">Reprogramar</option>
+                </optgroup>
+                <optgroup label="Grupo 2 (En Proceso / Producción)">
+                    <option value="Editar">Editar</option>
+                    <option value="Subtitular">Subtitular</option>
+                    <option value="Corregir cambios">Corregir cambios</option>
+                    <option value="Subir a servidor">Subir a servidor</option>
+                    <option value="Subir a YT">Subir a YT</option>
+                    <option value="Confirmar Carga">Confirmar Carga</option>
+                </optgroup>
+                <optgroup label="Grupo 3 (Finalizados)">
+                    <option value="Actividad Finalizada">Actividad Finalizada</option>
+                </optgroup>
+            </select>
+        </div>
+
+        <button class="btn btn-secondary" id="btnToggleUrgentes" onclick="window.toggleUrgenciesOnly()">
+            🚨 Solo Urgentes (🔴/🟠)
+        </button>
+
+        <button class="btn btn-secondary" id="btnToggleFinalizados" onclick="window.toggleHideFinalized()">
+            👁️ Ocultar Finalizados
+        </button>
+
+        <button class="btn btn-secondary" onclick="window.openManagerModal()">
+            ⚙️ Administrar Listas
+        </button>
+
+        <button class="btn btn-secondary btn-xs" onclick="window.resetFilters()" style="margin-left: auto;">Limpiar Filtros</button>
+    </section>
+
+    <main id="mainContainer" class="week-grid">
+        <!-- Render dinámico -->
+    </main>
+
+    <!-- Modal Formulario Pedido -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <h2 id="modalTitle" style="margin-bottom: 16px;">Nuevo Pedido de Grabación</h2>
+            <form id="orderForm" onsubmit="window.saveOrder(event)">
+                <input type="hidden" id="editId">
+                <div class="form-grid">
+                    
+                    <div class="form-group">
+                        <label>Fecha de Grabación</label>
+                        <input type="date" id="fecha" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Hora de Grabación</label>
+                        <input type="text" id="hora" placeholder="Ej: 14:00 - 15:00 hs" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Profesor / Tutor</label>
+                        <input type="text" id="profesor" list="profesoresDatalist" required placeholder="Nombre del docente">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Carrera</label>
+                        <input type="text" id="carrera" list="carrerasDatalist" required placeholder="Ej: Lic. en Psicología">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Materia</label>
+                        <input type="text" id="materia" list="materiasDatalist" required placeholder="Ej: Psicometría">
+                    </div>
+
+                    <!-- NUEVO CAMPO TEMA -->
+                    <div class="form-group">
+                        <label>Tema (Opcional)</label>
+                        <input type="text" id="tema" placeholder="Ej: Unidad 2 - Estructuras de Control">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Cantidad de Videos</label>
+                        <input type="number" id="cantidadVideos" value="1" min="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tipo de Pedido</label>
+                        <select id="tipoPedido" required>
+                            <option value="Videos de Materia">Videos de Materia</option>
+                            <option value="Clases en Video">Clases en Video</option>
+                            <option value="Videos de Difusión">Videos de Difusión</option>
+                            <option value="Otros Videos">Otros Videos</option>
+                            <option value="Mapa y Podcast">Mapa y Podcast</option>
+                            <option value="Ocasión Especial">Ocasión Especial</option>
+                            <option value="Colaciones de Grado">Colaciones de Grado</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Área Solicitante</label>
+                        <select id="area" required>
+                            <option value="Distancia">Distancia</option>
+                            <option value="Continua">Continua</option>
+                            <option value="Posgrados">Posgrados</option>
+                            <option value="DSA">DSA</option>
+                            <option value="SSA">SSA</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="RRHH">RRHH</option>
+                            <option value="ISP">ISP</option>
+                            <option value="Gestión Académica">Gestión Académica</option>
+                            <option value="CRI">CRI</option>
+                            <option value="Extensión">Extensión</option>
+                            <option value="Pedagogía">Pedagogía</option>
+                            <option value="Investigación">Investigación</option>
+                            <option value="Admisión">Admisión</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Lugar de Realización</label>
+                        <select id="lugar" required>
+                            <option value="Telepuerto">Telepuerto</option>
+                            <option value="Auditorio">Auditorio</option>
+                            <option value="Botín">Botín</option>
+                            <option value="Campus">Campus</option>
+                            <option value="Fuera del Campus">Fuera del Campus</option>
+                            <option value="Home Office">Home Office</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Avisar a:</label>
+                        <input type="text" id="avisarA" list="contactosDatalist" placeholder="Ej: Lucía / Saddi">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Prioridad</label>
+                        <select id="prioridad">
+                            <option value="NORMAL">Normal (Sin semáforo)</option>
+                            <option value="MEDIA">Prioritario (🟠 Naranja)</option>
+                            <option value="ALTA">Urgente (🔴 Rojo)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Código de Video / Link YouTube</label>
+                        <input type="text" id="codigoYT" placeholder="Ej: 84920 / https://youtu.be/...">
+                    </div>
+
+                    <div class="form-group full">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="esOcasionEspecial" style="width: auto;">
+                            ⭐ Marcar como Ocasión Especial (Encabezar día y resaltar)
+                        </label>
+                    </div>
+
+                    <div class="form-group full">
+                        <label>¿Qué Grabar? (Indicaciones principales)</label>
+                        <textarea id="queGrabar" rows="2" placeholder="Graba en chroma con PPT. Presentación + Módulos..."></textarea>
+                    </div>
+
+                    <div class="form-group full">
+                        <label>Link de Referencia / Red / OneDrive</label>
+                        <input type="url" id="linkPedido" placeholder="https://onedrive.live.com/...">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Editor Asignado</label>
+                        <input type="text" id="editor" placeholder="Ej: Mati, Chaco, Tata">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Estado del Pedido</label>
+                        <select id="estado">
+                            <optgroup label="Grupo 1 (#00315C)">
+                                <option value="Grabar">Grabar</option>
+                                <option value="Pasar a">Pasar a</option>
+                                <option value="Transmisión">Transmisión</option>
+                                <option value="Eventos">Eventos</option>
+                                <option value="Reunión">Reunión</option>
+                                <option value="Pasado a revisión">Pasado a revisión</option>
+                                <option value="Falta código de clase">Falta código de clase</option>
+                                <option value="Ocasión especial">Ocasión especial</option>
+                                <option value="Faltan indicaciones">Faltan indicaciones</option>
+                                <option value="Reprogramar">Reprogramar</option>
+                            </optgroup>
+                            <optgroup label="Grupo 2 (#6E0000)">
+                                <option value="Editar">Editar</option>
+                                <option value="Subtitular">Subtitular</option>
+                                <option value="Corregir cambios">Corregir cambios</option>
+                                <option value="Subir a servidor">Subir a servidor</option>
+                                <option value="Subir a YT">Subir a YT</option>
+                                <option value="Confirmar Carga">Confirmar Carga</option>
+                            </optgroup>
+                            <optgroup label="Grupo 3 (#808080)">
+                                <option value="Actividad Finalizada">Actividad Finalizada</option>
+                            </optgroup>
+                        </select>
+                    </div>
+
+                </div>
+
+                <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px;">
+                    <button type="button" class="btn btn-secondary" onclick="window.closeModal()">Cancelar</button>
+                    <button type="submit" class="btn">Guardar Pedido</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Administrador de Listas / Edición e Inserción Manual -->
+    <div class="modal-overlay" id="managerModal">
+        <div class="modal" style="max-width: 800px;">
+            <h2>⚙️ Administrar Bases de Datos y Listas</h2>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">
+                Cargá manualmente opciones frecuentes o eliminá registros mal escritos.
+            </p>
+
+            <div class="manager-grid">
+                <!-- Columna Profesores -->
+                <div class="manager-col">
+                    <h4>👨‍🏫 Profesores / Tutores</h4>
+                    <div class="input-add-group">
+                        <input type="text" id="addInputProfesor" placeholder="Nuevo docente...">
+                        <button class="btn btn-xs" onclick="window.manualAddItem('contactos_profesores', 'addInputProfesor')">+ Agregar</button>
+                    </div>
+                    <div class="manager-list-container" id="listColProfesores"></div>
+                </div>
+
+                <!-- Columna Carreras -->
+                <div class="manager-col">
+                    <h4>🎓 Carreras</h4>
+                    <div class="input-add-group">
+                        <input type="text" id="addInputCarrera" placeholder="Nueva carrera...">
+                        <button class="btn btn-xs" onclick="window.manualAddItem('contactos_carreras', 'addInputCarrera')">+ Agregar</button>
+                    </div>
+                    <div class="manager-list-container" id="listColCarreras"></div>
+                </div>
+
+                <!-- Columna Materias -->
+                <div class="manager-col">
+                    <h4>📖 Materias</h4>
+                    <div class="input-add-group">
+                        <input type="text" id="addInputMateria" placeholder="Nueva materia...">
+                        <button class="btn btn-xs" onclick="window.manualAddItem('contactos_materias', 'addInputMateria')">+ Agregar</button>
+                    </div>
+                    <div class="manager-list-container" id="listColMaterias"></div>
+                </div>
+
+                <!-- Columna Avisar a -->
+                <div class="manager-col">
+                    <h4>🔔 Avisar a</h4>
+                    <div class="input-add-group">
+                        <input type="text" id="addInputAvisar" placeholder="Nuevo contacto...">
+                        <button class="btn btn-xs" onclick="window.manualAddItem('contactos_avisar', 'addInputAvisar')">+ Agregar</button>
+                    </div>
+                    <div class="manager-list-container" id="listColAvisar"></div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+                <button type="button" class="btn btn-secondary" onclick="window.closeManagerModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPT PRINCIPAL INTEGRADOR CON FIREBASE -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AiZaSyAo96PMR_YNq22ElREl4k-tDRTyc1AfmWQ",
+            authDomain: "turnos-de-grabacion-y-pedidos.firebaseapp.com",
+            projectId: "turnos-de-grabacion-y-pedidos",
+            storageBucket: "turnos-de-grabacion-y-pedidos.firebasestorage.app",
+            messagingSenderId: "546082507026",
+            appId: "1:546082507026:web:ebc493a16a2aba04ba4bcb",
+            measurementId: "G-PFWG1JRF0J"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Estado Global
+        window.pedidos = [];
+        window.feriados = [];
+        window.novedadesEquipo = [];
+
+        window.catProfesores = [];
+        window.catCarreras = [];
+        window.catMaterias = [];
+        window.catAvisar = [];
+
+        window.currentDate = new Date();
+        window.currentView = 'week';
+        window.hideFinalized = false;
+        window.showUrgenciesOnly = false;
+
+        const GRUPO_1 = ['Grabar', 'Pasar a', 'Transmisión', 'Eventos', 'Reunión', 'Pasado a revisión', 'Falta código de clase', 'Ocasión especial', 'Faltan indicaciones', 'Reprogramar'];
+        const GRUPO_2 = ['Editar', 'Subtitular', 'Corregir cambios', 'Subir a servidor', 'Subir a YT', 'Confirmar Carga'];
+        const GRUPO_3 = ['Actividad Finalizada'];
+        const TODOS_LOS_ESTADOS = [...GRUPO_1, ...GRUPO_2, ...GRUPO_3];
+
+        // Escuchadores Firebase en Tiempo Real
+        onSnapshot(collection(db, "pedidos"), (snapshot) => {
+            window.pedidos = [];
+            snapshot.forEach((doc) => {
+                window.pedidos.push(doc.data());
+            });
+            window.renderView();
+        });
+
+        onSnapshot(collection(db, "feriados"), (snapshot) => {
+            window.feriados = [];
+            snapshot.forEach((doc) => {
+                window.feriados.push(doc.id);
+            });
+            window.renderView();
+        });
+
+        onSnapshot(collection(db, "novedades"), (snapshot) => {
+            window.novedadesEquipo = [];
+            snapshot.forEach((doc) => {
+                window.novedadesEquipo.push(doc.data());
+            });
+            window.renderView();
+        });
+
+        // Escuchadores para Listas de Sugerencias
+        function bindCollectionList(colName, stateArrayName, datalistId) {
+            onSnapshot(collection(db, colName), (snapshot) => {
+                window[stateArrayName] = [];
+                const datalist = document.getElementById(datalistId);
+                if (datalist) datalist.innerHTML = "";
+
+                snapshot.forEach((docSnap) => {
+                    const item = { id: docSnap.id, nombre: docSnap.data().nombre };
+                    window[stateArrayName].push(item);
+
+                    if (datalist) {
+                        const opt = document.createElement("option");
+                        opt.value = item.nombre;
+                        datalist.appendChild(opt);
+                    }
+                });
+
+                if (document.getElementById("managerModal").style.display === "flex") {
+                    window.renderManagerLists();
+                }
+            });
+        }
+
+        bindCollectionList("contactos_profesores", "catProfesores", "profesoresDatalist");
+        bindCollectionList("contactos_carreras", "catCarreras", "carrerasDatalist");
+        bindCollectionList("contactos_materias", "catMaterias", "materiasDatalist");
+        bindCollectionList("contactos_avisar", "catAvisar", "contactosDatalist");
+
+        window.guardarItemDatalist = async function(colName, texto) {
+            if (!texto || !texto.trim()) return;
+            const limpio = texto.trim();
+            const idDoc = limpio.toLowerCase().replace(/[^a-z0-9]/g, "_");
+            await setDoc(doc(db, colName, idDoc), { nombre: limpio });
+        };
+
+        window.deleteCatalogItem = async function(colName, idDoc) {
+            await deleteDoc(doc(db, colName, idDoc));
+        };
+
+        window.manualAddItem = async function(colName, inputId) {
+            const input = document.getElementById(inputId);
+            if (input && input.value.trim() !== '') {
+                await window.guardarItemDatalist(colName, input.value.trim());
+                input.value = '';
+            }
+        };
+
+        // Funciones auxiliares
+        function getCardStateClass(estado) {
+            if (GRUPO_1.includes(estado)) return 'card-st-1';
+            if (GRUPO_2.includes(estado)) return 'card-st-2';
+            if (GRUPO_3.includes(estado)) return 'card-st-3';
+            return '';
+        }
+
+        function getPriorityBadge(prioridad) {
+            if (prioridad === 'ALTA') return '🔴 ';
+            if (prioridad === 'MEDIA') return '🟠 ';
+            return '';
+        }
+
+        window.toggleFeriado = async function(dateISO) {
+            const isFeriado = window.feriados.includes(dateISO);
+            if (isFeriado) {
+                await deleteDoc(doc(db, "feriados", dateISO));
+            } else {
+                await setDoc(doc(db, "feriados", dateISO), { activo: true });
+            }
+        };
+
+        window.addNovedad = async function(dateISO) {
+            const texto = prompt('Ingrese la novedad del equipo (ej: Cumpleaños, Licencia por enfermedad):');
+            if (texto && texto.trim() !== '') {
+                const novedad = {
+                    id: Date.now(),
+                    fecha: dateISO,
+                    texto: texto.trim()
+                };
+                await setDoc(doc(db, "novedades", String(novedad.id)), novedad);
+            }
+        };
+
+        window.deleteNovedad = async function(id) {
+            await deleteDoc(doc(db, "novedades", String(id)));
+        };
+
+        window.getFilteredPedidos = function() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            const status = document.getElementById('statusFilter').value;
+
+            return window.pedidos.filter(p => {
+                if (window.hideFinalized && p.estado === 'Actividad Finalizada') return false;
+                if (window.showUrgenciesOnly && p.prioridad !== 'ALTA' && p.prioridad !== 'MEDIA') return false;
+
+                const fullText = `
+                    ${p.profesor} 
+                    ${p.materia} 
+                    ${p.carrera} 
+                    ${p.tema || ''}
+                    ${p.queGrabar} 
+                    ${p.avisarA} 
+                    ${p.editor} 
+                    ${p.area} 
+                    ${p.lugar} 
+                    ${p.tipoPedido}
+                    ${p.codigoYT || ''}
+                `.toLowerCase();
+
+                const matchQuery = !query || fullText.includes(query);
+                const matchStatus = status === 'TODOS' || p.estado === status;
+
+                return matchQuery && matchStatus;
+            });
+        };
+
+        window.toggleUrgenciesOnly = function() {
+            window.showUrgenciesOnly = !window.showUrgenciesOnly;
+            const btn = document.getElementById('btnToggleUrgentes');
+            btn.classList.toggle('btn-urgent-active', window.showUrgenciesOnly);
+            btn.innerText = window.showUrgenciesOnly ? '🚨 Mostrando Solo Urgentes (🔴/🟠)' : '🚨 Solo Urgentes (🔴/🟠)';
+            window.renderView();
+        };
+
+        window.toggleHideFinalized = function() {
+            window.hideFinalized = !window.hideFinalized;
+            const btn = document.getElementById('btnToggleFinalizados');
+            btn.classList.toggle('btn-toggle-active', window.hideFinalized);
+            btn.innerText = window.hideFinalized ? '🙈 Mostrando sin Finalizados' : '👁️ Ocultar Finalizados';
+            window.renderView();
+        };
+
+        window.resetFilters = function() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('statusFilter').value = 'TODOS';
+            window.hideFinalized = false;
+            window.showUrgenciesOnly = false;
+            
+            document.getElementById('btnToggleFinalizados').classList.remove('btn-toggle-active');
+            document.getElementById('btnToggleFinalizados').innerText = '👁️ Ocultar Finalizados';
+
+            document.getElementById('btnToggleUrgentes').classList.remove('btn-urgent-active');
+            document.getElementById('btnToggleUrgentes').innerText = '🚨 Solo Urgentes (🔴/🟠)';
+
+            window.renderView();
+        };
+
+        window.setViewMode = function(mode) {
+            window.currentView = mode;
+            document.getElementById('btnWeekView').classList.toggle('active', mode === 'week');
+            document.getElementById('btnMonthView').classList.toggle('active', mode === 'month');
+            document.getElementById('btnListView').classList.toggle('active', mode === 'list');
+            
+            const nav = document.getElementById('dateNavigator');
+            const main = document.getElementById('mainContainer');
+
+            if (mode === 'week') {
+                main.className = 'week-grid';
+                nav.style.display = 'flex';
+            } else if (mode === 'month') {
+                main.className = 'month-grid';
+                nav.style.display = 'flex';
+            } else {
+                main.className = 'list-view';
+                nav.style.display = 'none';
+            }
+            window.renderView();
+        };
+
+        window.navigateDate = function(direction) {
+            if (window.currentView === 'week') {
+                window.currentDate.setDate(window.currentDate.getDate() + (direction * 7));
+            } else if (window.currentView === 'month') {
+                window.currentDate.setMonth(window.currentDate.getMonth() + direction);
+            }
+            window.renderView();
+        };
+
+        function getWeekDays(refDate) {
+            const d = new Date(refDate);
+            const day = d.getDay();
+            const diffToMonday = d.getDate() - day + (day === 0 ? -6 : 1);
+            
+            const monday = new Date(d.setDate(diffToMonday));
+            const days = [];
+
+            for (let i = 0; i < 5; i++) {
+                const nextDay = new Date(monday);
+                nextDay.setDate(monday.getDate() + i);
+                days.push(nextDay);
+            }
+            return days;
+        }
+
+        window.renderView = function() {
+            if (window.currentView === 'week') {
+                renderWeekBoard();
+            } else if (window.currentView === 'month') {
+                renderMonthBoard();
+            } else {
+                renderListView();
+            }
+        };
+
+        function renderWeekBoard() {
+            const container = document.getElementById('mainContainer');
+            container.innerHTML = '';
+
+            const activePedidos = window.getFilteredPedidos();
+            const weekDays = getWeekDays(window.currentDate);
+            const options = { day: '2-digit', month: '2-digit' };
+            const mondayStr = weekDays[0].toLocaleDateString('es-AR', options);
+            const fridayStr = weekDays[4].toLocaleDateString('es-AR', options);
+            document.getElementById('dateRangeLabel').innerText = `Semana ${mondayStr} al ${fridayStr}`;
+
+            const NOMBRES_DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
+
+            weekDays.forEach((dateObj, index) => {
+                const dateISO = dateObj.toISOString().split('T')[0];
+                const dateDisplay = dateObj.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+                const isFeriado = window.feriados.includes(dateISO);
+                
+                const col = document.createElement('div');
+                col.className = `day-column ${isFeriado ? 'feriado' : ''}`;
+
+                let itemsOfDay = activePedidos.filter(p => p.fecha === dateISO);
+                itemsOfDay.sort((a, b) => (b.esOcasionEspecial ? 1 : 0) - (a.esOcasionEspecial ? 1 : 0));
+
+                const novedadesDelDia = window.novedadesEquipo.filter(n => n.fecha === dateISO);
+
+                col.innerHTML = `
+                    <div class="day-header">
+                        ${NOMBRES_DIAS[index]}
+                        <span class="date-sub">${dateDisplay} (${itemsOfDay.length})</span>
+                        <div class="header-actions-day">
+                            <button class="btn-quick-add" onclick="window.openModalWithDate('${dateISO}')">+ Pedido</button>
+                            <button class="btn-add-novedad" onclick="window.addNovedad('${dateISO}')">+ Novedad</button>
+                        </div>
+                    </div>
+
+                    ${isFeriado ? `<div class="feriado-header-tag">🎉 Feriado Nacional</div>` : ''}
+
+                    ${novedadesDelDia.map(n => `
+                        <div class="novedad-badge">
+                            <span>📌 ${n.texto}</span>
+                            <button onclick="window.deleteNovedad(${n.id})">✖</button>
+                        </div>
+                    `).join('')}
+
+                    <div class="cards-container">
+                        ${itemsOfDay.map(p => `
+                            <div class="card ${getCardStateClass(p.estado)} ${p.esOcasionEspecial ? 'ocasion-especial' : ''}">
+                                ${p.esOcasionEspecial ? `<div class="badge-especial">⭐ Ocasión Especial</div><br>` : ''}
+                                <span class="time-badge">${getPriorityBadge(p.prioridad)}🕒 ${p.hora}</span>
+                                <div class="card-header">
+                                    <span class="tag">${p.area}</span>
+                                    <span class="tag" style="background:#0284c720; color:#38bdf8;">👤 ${p.editor || 'Sin asignar'}</span>
+                                </div>
+                                <div class="card-title">${p.materia}</div>
+                                <div class="card-sub">${p.carrera}</div>
+
+                                <div class="card-details">
+                                    <div><strong>Docente:</strong> ${p.profesor}</div>
+                                    ${p.tema ? `<div><strong>Tema:</strong> ${p.tema}</div>` : ''}
+                                    <div><strong>Lugar:</strong> ${p.lugar} | <strong>Tipo:</strong> ${p.tipoPedido}</div>
+                                    <div><strong>Cant. Videos:</strong> ${p.cantidadVideos}</div>
+                                    ${p.queGrabar ? `<div style="margin-top:4px; font-style:italic;">"${p.queGrabar}"</div>` : ''}
+                                    ${p.avisarA ? `<div style="margin-top:2px; font-size:0.75rem;">🔔 Avisar: ${p.avisarA}</div>` : ''}
+                                    ${p.codigoYT ? `
+                                        <div>
+                                            ${p.codigoYT.startsWith('http') ? 
+                                                `<a href="${p.codigoYT}" target="_blank" class="link-btn">🔴 Ver en YouTube</a>` : 
+                                                `<span class="code-badge">🔑 Cód: ${p.codigoYT}</span>`}
+                                        </div>` : ''}
+                                    ${p.linkPedido ? `<a href="${p.linkPedido}" target="_blank" class="link-btn">🔗 Abrir Link Adjunto</a>` : ''}
+                                </div>
+
+                                <div class="card-actions">
+                                    <select onchange="window.updateStatus(${p.id}, this.value)">
+                                        ${TODOS_LOS_ESTADOS.map(e => `<option value="${e}" ${e === p.estado ? 'selected' : ''}>Estado: ${e}</option>`).join('')}
+                                    </select>
+
+                                    <div class="card-buttons">
+                                        <button class="btn btn-secondary btn-xs" onclick="window.editOrder(${p.id})">✏️ Editar</button>
+                                        <button class="btn btn-danger btn-xs" onclick="window.deleteOrder(${p.id})">🗑️ Borrar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(col);
+            });
+        }
+
+        function renderMonthBoard() {
+            const container = document.getElementById('mainContainer');
+            container.innerHTML = '';
+
+            const activePedidos = window.getFilteredPedidos();
+            const year = window.currentDate.getFullYear();
+            const month = window.currentDate.getMonth();
+
+            const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            document.getElementById('dateRangeLabel').innerText = `${monthNames[month]} ${year}`;
+
+            const dayHeaders = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+            dayHeaders.forEach(dh => {
+                const headerDiv = document.createElement('div');
+                headerDiv.className = 'month-header-day';
+                headerDiv.innerText = dh;
+                container.appendChild(headerDiv);
+            });
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+
+            let startingDay = firstDay.getDay() - 1;
+            if (startingDay === -1) startingDay = 6;
+
+            for (let i = 0; i < startingDay; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'month-cell empty';
+                container.appendChild(emptyCell);
+            }
+
+            const todayISO = new Date().toISOString().split('T')[0];
+
+            for (let day = 1; day <= lastDay.getDate(); day++) {
+                const cellDate = new Date(year, month, day);
+                const dateISO = new Date(cellDate.getTime() - (cellDate.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                const isFeriado = window.feriados.includes(dateISO);
+                
+                const cell = document.createElement('div');
+                cell.className = `month-cell ${isFeriado ? 'feriado' : ''}`;
+
+                let itemsOfDay = activePedidos.filter(p => p.fecha === dateISO);
+                itemsOfDay.sort((a, b) => (b.esOcasionEspecial ? 1 : 0) - (a.esOcasionEspecial ? 1 : 0));
+
+                const novedadesDelDia = window.novedadesEquipo.filter(n => n.fecha === dateISO);
+                const isToday = dateISO === todayISO;
+
+                cell.innerHTML = `
+                    <div class="month-cell-header ${isToday ? 'today' : ''}">
+                        <span style="cursor:pointer;" onclick="window.openModalWithDate('${dateISO}')" title="Crear pedido el día ${day}">
+                            ${day} <button class="btn-quick-add" style="font-size:0.65rem; padding:0 3px;">+</button>
+                        </span>
+                        <button class="btn-add-novedad" onclick="window.toggleFeriado('${dateISO}')" title="Marcar/Desmarcar Feriado">
+                            ${isFeriado ? '🎉 Quitar Feriado' : '🎉'}
+                        </button>
+                    </div>
+
+                    ${isFeriado ? `<div style="font-size:0.65rem; background:#7c3aed; color:#fff; text-align:center; border-radius:2px; font-weight:bold;">FERIADO</div>` : ''}
+
+                    ${novedadesDelDia.map(n => `
+                        <div class="novedad-badge" style="font-size:0.65rem; padding:2px 4px; margin-bottom:2px;">
+                            <span>📌 ${n.texto}</span>
+                            <button onclick="window.deleteNovedad(${n.id})">✖</button>
+                        </div>
+                    `).join('')}
+
+                    <div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">
+                        ${itemsOfDay.map(p => `
+                            <div class="card-compact ${getCardStateClass(p.estado)} ${p.esOcasionEspecial ? 'ocasion-especial' : ''}" onclick="window.editOrder(${p.id})" title="${p.materia} ${p.tema ? '- ' + p.tema : ''} (${p.profesor})">
+                                <span class="compact-time">${getPriorityBadge(p.prioridad)}${p.hora}</span>
+                                <div class="compact-title">${p.materia}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(cell);
+            }
+        }
+
+        function renderListView() {
+            const container = document.getElementById('mainContainer');
+            container.innerHTML = '';
+
+            const activePedidos = window.getFilteredPedidos();
+
+            if (activePedidos.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding: 40px; color: var(--text-muted);">No se encontraron pedidos guardados en la base de datos.</div>`;
+                return;
+            }
+
+            const sortedPedidos = [...activePedidos].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+            sortedPedidos.forEach(p => {
+                const fechaPartes = p.fecha.split('-');
+                const fechaFormateada = `${fechaPartes[2]}/${fechaPartes[1]}/${fechaPartes[0]}`;
+
+                const item = document.createElement('div');
+                item.className = `list-item ${getCardStateClass(p.estado)} ${p.esOcasionEspecial ? 'ocasion-especial' : ''}`;
+
+                item.innerHTML = `
+                    <div class="list-info-main">
+                        <div class="list-date-badge">
+                            ${p.esOcasionEspecial ? '⭐ [OCASIÓN ESPECIAL] ' : ''}${getPriorityBadge(p.prioridad)}📅 ${fechaFormateada} — 🕒 ${p.hora}
+                        </div>
+                        <div class="list-title">${p.materia} ${p.tema ? `<span style="font-size:0.85rem; font-weight:normal; color:#cbd5e1;">— Tema: ${p.tema}</span>` : ''}</div>
+                        <div class="list-sub"><strong>Docente:</strong> ${p.profesor} | <strong>Carrera:</strong> ${p.carrera} (${p.cantidadVideos} video/s)</div>
+                        <div class="list-tags">
+                            <span class="tag">${p.area}</span>
+                            <span class="tag" style="background:#0284c720; color:#38bdf8;">📍 ${p.lugar}</span>
+                            <span class="tag" style="background:#10b98120; color:#34d399;">👤 Editor: ${p.editor || 'Sin asignar'}</span>
+                            ${p.codigoYT ? `<span class="tag" style="background:#e0f2fe; color:#0369a1;">🔑 ${p.codigoYT}</span>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="list-actions">
+                        <select onchange="window.updateStatus(${p.id}, this.value)">
+                            ${TODOS_LOS_ESTADOS.map(e => `<option value="${e}" ${e === p.estado ? 'selected' : ''}>${e}</option>`).join('')}
+                        </select>
+                        <button class="btn btn-secondary btn-xs" onclick="window.editOrder(${p.id})">✏️ Editar</button>
+                        <button class="btn btn-danger btn-xs" onclick="window.deleteOrder(${p.id})">🗑️</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        window.updateStatus = async function(id, newStatus) {
+            const item = window.pedidos.find(p => p.id === id);
+            if(item) {
+                item.estado = newStatus;
+                await setDoc(doc(db, "pedidos", String(item.id)), item);
+            }
+        };
+
+        window.editOrder = function(id) {
+            const item = window.pedidos.find(p => p.id === id);
+            if (!item) return;
+
+            document.getElementById('modalTitle').innerText = 'Editar Pedido de Grabación';
+            document.getElementById('editId').value = item.id;
+            document.getElementById('fecha').value = item.fecha;
+            document.getElementById('hora').value = item.hora;
+            document.getElementById('profesor').value = item.profesor;
+            document.getElementById('carrera').value = item.carrera;
+            document.getElementById('materia').value = item.materia;
+            document.getElementById('tema').value = item.tema || '';
+            document.getElementById('cantidadVideos').value = item.cantidadVideos;
+            document.getElementById('tipoPedido').value = item.tipoPedido;
+            document.getElementById('area').value = item.area;
+            document.getElementById('lugar').value = item.lugar;
+            document.getElementById('avisarA').value = item.avisarA;
+            document.getElementById('prioridad').value = item.prioridad || 'NORMAL';
+            document.getElementById('codigoYT').value = item.codigoYT || '';
+            document.getElementById('esOcasionEspecial').checked = item.esOcasionEspecial || false;
+            document.getElementById('queGrabar').value = item.queGrabar;
+            document.getElementById('linkPedido').value = item.linkPedido;
+            document.getElementById('editor').value = item.editor;
+            document.getElementById('estado').value = item.estado;
+
+            window.openModal();
+        };
+
+        window.deleteOrder = async function(id) {
+            if (confirm('¿Estás seguro de borrar este pedido de la agenda en la nube?')) {
+                await deleteDoc(doc(db, "pedidos", String(id)));
+            }
+        };
+
+        window.openModal = function() {
+            document.getElementById('modal').style.display = 'flex';
+        };
+
+        window.openModalWithDate = function(dateISO) {
+            window.openModal();
+            document.getElementById('fecha').value = dateISO;
+        };
+
+        window.closeModal = function() {
+            document.getElementById('modal').style.display = 'none';
+            document.getElementById('orderForm').reset();
+            document.getElementById('editId').value = '';
+            document.getElementById('modalTitle').innerText = 'Nuevo Pedido de Grabación';
+        };
+
+        window.openManagerModal = function() {
+            document.getElementById('managerModal').style.display = 'flex';
+            window.renderManagerLists();
+        };
+
+        window.closeManagerModal = function() {
+            document.getElementById('managerModal').style.display = 'none';
+        };
+
+        window.renderManagerLists = function() {
+            function buildCol(containerId, list, colName) {
+                const div = document.getElementById(containerId);
+                if (!div) return;
+                div.innerHTML = "";
+                if (list.length === 0) {
+                    div.innerHTML = "<div style='color:var(--text-muted); font-size:0.75rem; padding:4px 0;'>Sin registros</div>";
+                    return;
+                }
+                list.forEach(item => {
+                    const row = document.createElement("div");
+                    row.className = "item-list-row";
+                    row.innerHTML = `
+                        <span>${item.nombre}</span>
+                        <button class="btn-delete-item" onclick="window.deleteCatalogItem('${colName}', '${item.id}')">🗑️</button>
+                    `;
+                    div.appendChild(row);
+                });
+            }
+
+            buildCol("listColProfesores", window.catProfesores, "contactos_profesores");
+            buildCol("listColCarreras", window.catCarreras, "contactos_carreras");
+            buildCol("listColMaterias", window.catMaterias, "contactos_materias");
+            buildCol("listColAvisar", window.catAvisar, "contactos_avisar");
+        };
+
+        window.saveOrder = async function(e) {
+            e.preventDefault();
+            const fechaInput = document.getElementById('fecha').value;
+
+            if (window.feriados.includes(fechaInput)) {
+                alert('⚠️ No se pueden programar pedidos en un día declarado FERIADO.');
+                return;
+            }
+
+            const editId = document.getElementById('editId').value;
+            const profesorVal = document.getElementById('profesor').value;
+            const carreraVal = document.getElementById('carrera').value;
+            const materiaVal = document.getElementById('materia').value;
+            const avisarAVal = document.getElementById('avisarA').value;
+
+            const orderData = {
+                id: editId ? Number(editId) : Date.now(),
+                fecha: fechaInput,
+                hora: document.getElementById('hora').value,
+                profesor: profesorVal,
+                carrera: carreraVal,
+                materia: materiaVal,
+                tema: document.getElementById('tema').value,
+                cantidadVideos: document.getElementById('cantidadVideos').value,
+                tipoPedido: document.getElementById('tipoPedido').value,
+                area: document.getElementById('area').value,
+                lugar: document.getElementById('lugar').value,
+                avisarA: avisarAVal,
+                prioridad: document.getElementById('prioridad').value,
+                codigoYT: document.getElementById('codigoYT').value,
+                esOcasionEspecial: document.getElementById('esOcasionEspecial').checked,
+                queGrabar: document.getElementById('queGrabar').value,
+                linkPedido: document.getElementById('linkPedido').value,
+                editor: document.getElementById('editor').value,
+                estado: document.getElementById('estado').value
+            };
+
+            await setDoc(doc(db, "pedidos", String(orderData.id)), orderData);
+
+            if (window.guardarItemDatalist) {
+                await window.guardarItemDatalist("contactos_profesores", profesorVal);
+                await window.guardarItemDatalist("contactos_carreras", carreraVal);
+                await window.guardarItemDatalist("contactos_materias", materiaVal);
+                await window.guardarItemDatalist("contactos_avisar", avisarAVal);
+            }
+
+            window.closeModal();
+        };
+
+        window.renderView();
+    </script>
+</body>
+</html>
