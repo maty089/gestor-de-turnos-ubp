@@ -936,6 +936,12 @@
             getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
+        // ==========================================
+        // CONFIGURACIÓN: TOTAL DE GIFS DISPONIBLES
+        // Cambiá este número por la cantidad exacta que tengas (ej: 14, 18, 20)
+        // ==========================================
+        const TOTAL_GIFS = 40;
+
         const firebaseConfig = {
             apiKey: "AiZaSyAo96PMR_YNq22ElREl4k-tDRTyc1AfmWQ",
             authDomain: "turnos-de-grabacion-y-pedidos.firebaseapp.com",
@@ -964,18 +970,22 @@
         window.hideFinalized = false;
         window.showUrgenciesOnly = false;
 
-        // Cantidad total de GIFs en la carpeta /gifs
-        const TOTAL_GIFS = 14;
-
         const GRUPO_1 = ['Grabar', 'Pasar a', 'Transmisión', 'Eventos', 'Reunión', 'Pasado a revisión', 'Falta código de clase', 'Ocasión especial', 'Faltan indicaciones', 'Reprogramar'];
         const GRUPO_2 = ['Editar', 'Subtitular', 'Corregir cambios', 'Subir a servidor', 'Subir a YT', 'Confirmar Carga'];
         const GRUPO_3 = ['Actividad Finalizada'];
         const TODOS_LOS_ESTADOS = [...GRUPO_1, ...GRUPO_2, ...GRUPO_3];
 
-        // Lógica de Celebración
+        // Lógica de Celebración (con respaldo ante errores de carga)
         window.triggerCelebration = function() {
             const randomNum = Math.floor(Math.random() * TOTAL_GIFS) + 1;
             const gifImg = document.getElementById("celebrationGif");
+            
+            // Si el archivo no existe o da 404, salta al 1.gif como respaldo
+            gifImg.onerror = function() {
+                this.onerror = null;
+                this.src = "gifs/1.gif";
+            };
+
             gifImg.src = `gifs/${randomNum}.gif`;
             document.getElementById("celebrationOverlay").style.display = "flex";
         };
@@ -1453,7 +1463,6 @@
                 item.estado = newStatus;
                 await setDoc(doc(db, "pedidos", String(item.id)), item);
 
-                // Si se marca como finalizada y no lo estaba antes, se dispara el GIF
                 if (newStatus === "Actividad Finalizada" && oldStatus !== "Actividad Finalizada") {
                     window.triggerCelebration();
                 }
