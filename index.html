@@ -537,6 +537,80 @@
             font-size: 0.75rem;
         }
         .btn-delete-item:hover { text-decoration: underline; }
+
+        /* MODAL DE CELEBRACIÓN / GIF */
+        .celebration-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.88);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        .celebration-box {
+            position: relative;
+            background: #1e293b;
+            border: 2px solid var(--accent);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 480px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 0 25px rgba(37, 99, 235, 0.4);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .celebration-box img {
+            width: 100%;
+            max-height: 340px;
+            object-fit: contain;
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+
+        .celebration-box h3 {
+            font-size: 1.25rem;
+            color: #38bdf8;
+            margin-bottom: 4px;
+        }
+
+        .celebration-box p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .btn-close-celebration {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .btn-close-celebration:hover {
+            color: var(--danger);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.85); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -658,7 +732,6 @@
                         <input type="text" id="materia" list="materiasDatalist" required placeholder="Ej: Psicometría">
                     </div>
 
-                    <!-- NUEVO CAMPO TEMA -->
                     <div class="form-group">
                         <label>Tema (Opcional)</label>
                         <input type="text" id="tema" placeholder="Ej: Unidad 2 - Estructuras de Control">
@@ -803,7 +876,6 @@
             </p>
 
             <div class="manager-grid">
-                <!-- Columna Profesores -->
                 <div class="manager-col">
                     <h4>👨‍🏫 Profesores / Tutores</h4>
                     <div class="input-add-group">
@@ -813,7 +885,6 @@
                     <div class="manager-list-container" id="listColProfesores"></div>
                 </div>
 
-                <!-- Columna Carreras -->
                 <div class="manager-col">
                     <h4>🎓 Carreras</h4>
                     <div class="input-add-group">
@@ -823,7 +894,6 @@
                     <div class="manager-list-container" id="listColCarreras"></div>
                 </div>
 
-                <!-- Columna Materias -->
                 <div class="manager-col">
                     <h4>📖 Materias</h4>
                     <div class="input-add-group">
@@ -833,7 +903,6 @@
                     <div class="manager-list-container" id="listColMaterias"></div>
                 </div>
 
-                <!-- Columna Avisar a -->
                 <div class="manager-col">
                     <h4>🔔 Avisar a</h4>
                     <div class="input-add-group">
@@ -847,6 +916,16 @@
             <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
                 <button type="button" class="btn btn-secondary" onclick="window.closeManagerModal()">Cerrar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- OVERLAY CELEBRACIÓN CON GIFS ALEATORIOS -->
+    <div class="celebration-overlay" id="celebrationOverlay" onclick="window.closeCelebration(event)">
+        <div class="celebration-box" onclick="event.stopPropagation()">
+            <button class="btn-close-celebration" onclick="window.closeCelebrationDirect()">✖</button>
+            <h3>🎉 ¡Actividad Finalizada! 🎉</h3>
+            <p>¡Buen trabajo equipo! Tarea completada con éxito.</p>
+            <img id="celebrationGif" src="" alt="Celebración">
         </div>
     </div>
 
@@ -885,10 +964,42 @@
         window.hideFinalized = false;
         window.showUrgenciesOnly = false;
 
+        // Cantidad total de GIFs en la carpeta /gifs
+        const TOTAL_GIFS = 20;
+
         const GRUPO_1 = ['Grabar', 'Pasar a', 'Transmisión', 'Eventos', 'Reunión', 'Pasado a revisión', 'Falta código de clase', 'Ocasión especial', 'Faltan indicaciones', 'Reprogramar'];
         const GRUPO_2 = ['Editar', 'Subtitular', 'Corregir cambios', 'Subir a servidor', 'Subir a YT', 'Confirmar Carga'];
         const GRUPO_3 = ['Actividad Finalizada'];
         const TODOS_LOS_ESTADOS = [...GRUPO_1, ...GRUPO_2, ...GRUPO_3];
+
+        // Lógica de Celebración
+        window.triggerCelebration = function() {
+            const randomNum = Math.floor(Math.random() * TOTAL_GIFS) + 1;
+            const gifImg = document.getElementById("celebrationGif");
+            gifImg.src = `gifs/${randomNum}.gif`;
+            document.getElementById("celebrationOverlay").style.display = "flex";
+        };
+
+        window.closeCelebration = function(e) {
+            if (e.target.id === 'celebrationOverlay') {
+                window.closeCelebrationDirect();
+            }
+        };
+
+        window.closeCelebrationDirect = function() {
+            const overlay = document.getElementById("celebrationOverlay");
+            overlay.style.display = "none";
+            document.getElementById("celebrationGif").src = "";
+        };
+
+        // Cerrar con tecla Escape
+        window.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
+                window.closeCelebrationDirect();
+                window.closeModal();
+                window.closeManagerModal();
+            }
+        });
 
         // Escuchadores Firebase en Tiempo Real
         onSnapshot(collection(db, "pedidos"), (snapshot) => {
@@ -963,7 +1074,6 @@
             }
         };
 
-        // Funciones auxiliares
         function getCardStateClass(estado) {
             if (GRUPO_1.includes(estado)) return 'card-st-1';
             if (GRUPO_2.includes(estado)) return 'card-st-2';
@@ -1339,8 +1449,14 @@
         window.updateStatus = async function(id, newStatus) {
             const item = window.pedidos.find(p => p.id === id);
             if(item) {
+                const oldStatus = item.estado;
                 item.estado = newStatus;
                 await setDoc(doc(db, "pedidos", String(item.id)), item);
+
+                // Si se marca como finalizada y no lo estaba antes, se dispara el GIF
+                if (newStatus === "Actividad Finalizada" && oldStatus !== "Actividad Finalizada") {
+                    window.triggerCelebration();
+                }
             }
         };
 
@@ -1443,6 +1559,9 @@
             const carreraVal = document.getElementById('carrera').value;
             const materiaVal = document.getElementById('materia').value;
             const avisarAVal = document.getElementById('avisarA').value;
+            const estadoVal = document.getElementById('estado').value;
+
+            const oldOrder = editId ? window.pedidos.find(p => p.id === Number(editId)) : null;
 
             const orderData = {
                 id: editId ? Number(editId) : Date.now(),
@@ -1463,7 +1582,7 @@
                 queGrabar: document.getElementById('queGrabar').value,
                 linkPedido: document.getElementById('linkPedido').value,
                 editor: document.getElementById('editor').value,
-                estado: document.getElementById('estado').value
+                estado: estadoVal
             };
 
             await setDoc(doc(db, "pedidos", String(orderData.id)), orderData);
@@ -1476,6 +1595,10 @@
             }
 
             window.closeModal();
+
+            if (estadoVal === "Actividad Finalizada" && (!oldOrder || oldOrder.estado !== "Actividad Finalizada")) {
+                window.triggerCelebration();
+            }
         };
 
         window.renderView();
