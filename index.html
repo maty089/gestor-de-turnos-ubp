@@ -477,7 +477,6 @@
         .form-group label { display: block; font-size: 0.8rem; margin-bottom: 4px; color: var(--text-muted); }
         .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--text) !important; }
 
-        /* Estilos del Administrador de Sugerencias */
         .manager-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -538,7 +537,6 @@
         }
         .btn-delete-item:hover { text-decoration: underline; }
 
-        /* MODAL DE CELEBRACIÓN / GIF */
         .celebration-overlay {
             position: fixed;
             top: 0; left: 0; right: 0; bottom: 0;
@@ -615,7 +613,6 @@
 </head>
 <body>
 
-    <!-- Datalists de Sugerencias -->
     <datalist id="profesoresDatalist"></datalist>
     <datalist id="carrerasDatalist"></datalist>
     <datalist id="materiasDatalist"></datalist>
@@ -696,10 +693,8 @@
     </section>
 
     <main id="mainContainer" class="week-grid">
-        <!-- Render dinámico -->
-    </main>
+        </main>
 
-    <!-- Modal Formulario Pedido -->
     <div class="modal-overlay" id="modal">
         <div class="modal">
             <h2 id="modalTitle" style="margin-bottom: 16px;">Nuevo Pedido de Grabación</h2>
@@ -867,7 +862,6 @@
         </div>
     </div>
 
-    <!-- Modal Administrador de Listas / Edición e Inserción Manual -->
     <div class="modal-overlay" id="managerModal">
         <div class="modal" style="max-width: 800px;">
             <h2>⚙️ Administrar Bases de Datos y Listas</h2>
@@ -919,7 +913,6 @@
         </div>
     </div>
 
-    <!-- OVERLAY CELEBRACIÓN CON GIFS ALEATORIOS -->
     <div class="celebration-overlay" id="celebrationOverlay" onclick="window.closeCelebration(event)">
         <div class="celebration-box" onclick="event.stopPropagation()">
             <button class="btn-close-celebration" onclick="window.closeCelebrationDirect()">✖</button>
@@ -929,17 +922,12 @@
         </div>
     </div>
 
-    <!-- SCRIPT PRINCIPAL INTEGRADOR CON FIREBASE -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
             getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // ==========================================
-        // CONFIGURACIÓN: TOTAL DE GIFS DISPONIBLES
-        // Cambiá este número por la cantidad exacta que tengas (ej: 14, 18, 20)
-        // ==========================================
         const TOTAL_GIFS = 40;
 
         const firebaseConfig = {
@@ -975,12 +963,11 @@
         const GRUPO_3 = ['Actividad Finalizada'];
         const TODOS_LOS_ESTADOS = [...GRUPO_1, ...GRUPO_2, ...GRUPO_3];
 
-        // Lógica de Celebración (con respaldo ante errores de carga)
+        // Lógica de Celebración
         window.triggerCelebration = function() {
             const randomNum = Math.floor(Math.random() * TOTAL_GIFS) + 1;
             const gifImg = document.getElementById("celebrationGif");
             
-            // Si el archivo no existe o da 404, salta al 1.gif como respaldo
             gifImg.onerror = function() {
                 this.onerror = null;
                 this.src = "gifs/1.gif";
@@ -1134,13 +1121,13 @@
                     ${p.profesor} 
                     ${p.materia} 
                     ${p.carrera} 
-                    ${p.tema || ''}
+                    ${p.tema || ''} 
                     ${p.queGrabar} 
                     ${p.avisarA} 
                     ${p.editor} 
                     ${p.area} 
                     ${p.lugar} 
-                    ${p.tipoPedido}
+                    ${p.tipoPedido} 
                     ${p.codigoYT || ''}
                 `.toLowerCase();
 
@@ -1229,6 +1216,27 @@
             return days;
         }
 
+        // ==========================================
+        // FUNCIONES DE ORDENAMIENTO POR HORARIO
+        // ==========================================
+        function parseTime(timeStr) {
+            if (!timeStr) return 9999;
+            const match = String(timeStr).match(/(\d{1,2})(?::(\d{2}))?/);
+            if (!match) return 9999;
+            const horas = parseInt(match[1], 10);
+            const minutos = match[2] ? parseInt(match[2], 10) : 0;
+            return (horas * 60) + minutos;
+        }
+
+        function comparePedidos(a, b) {
+            const espA = a.esOcasionEspecial ? 1 : 0;
+            const espB = b.esOcasionEspecial ? 1 : 0;
+            if (espB !== espA) {
+                return espB - espA;
+            }
+            return parseTime(a.hora) - parseTime(b.hora);
+        }
+
         window.renderView = function() {
             if (window.currentView === 'week') {
                 renderWeekBoard();
@@ -1261,7 +1269,7 @@
                 col.className = `day-column ${isFeriado ? 'feriado' : ''}`;
 
                 let itemsOfDay = activePedidos.filter(p => p.fecha === dateISO);
-                itemsOfDay.sort((a, b) => (b.esOcasionEspecial ? 1 : 0) - (a.esOcasionEspecial ? 1 : 0));
+                itemsOfDay.sort(comparePedidos);
 
                 const novedadesDelDia = window.novedadesEquipo.filter(n => n.fecha === dateISO);
 
@@ -1372,7 +1380,7 @@
                 cell.className = `month-cell ${isFeriado ? 'feriado' : ''}`;
 
                 let itemsOfDay = activePedidos.filter(p => p.fecha === dateISO);
-                itemsOfDay.sort((a, b) => (b.esOcasionEspecial ? 1 : 0) - (a.esOcasionEspecial ? 1 : 0));
+                itemsOfDay.sort(comparePedidos);
 
                 const novedadesDelDia = window.novedadesEquipo.filter(n => n.fecha === dateISO);
                 const isToday = dateISO === todayISO;
@@ -1420,7 +1428,11 @@
                 return;
             }
 
-            const sortedPedidos = [...activePedidos].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+            const sortedPedidos = [...activePedidos].sort((a, b) => {
+                const diffFecha = new Date(a.fecha) - new Date(b.fecha);
+                if (diffFecha !== 0) return diffFecha;
+                return comparePedidos(a, b);
+            });
 
             sortedPedidos.forEach(p => {
                 const fechaPartes = p.fecha.split('-');
